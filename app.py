@@ -1,89 +1,115 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import mysql.connector
 
 app = Flask(__name__)
 CORS(app)
 
-doctors = [
-    {"id": 1, "name": "Dr. Ananya Sharma", "department": "Cardiology"},
-    {"id": 2, "name": "Dr. Rahul Mehta", "department": "Orthopedics"},
-    {"id": 3, "name": "Dr. Priya Nair", "department": "Dermatology"},
-    {"id": 4, "name": "Dr. Kabir Khan", "department": "Neurology"},
-]
 
-appointments = [
-    {
-        "id": 101,
-        "patientName": "Amit Verma",
-        "phone": "9876543210",
-        "doctorId": 1,
-        "date": "2026-06-05",
-        "time": "10:30",
-        "reason": "Chest pain consultation",
-        "status": "Scheduled",
-    }
-]
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        database="hospital_db"
+    )
 
 
-@app.get("/")
+@app.route("/")
 def home():
-    return jsonify({"message": "Hospital Appointment API is running"})
+    return jsonify({"message": "Backend connected to MySQL"})
 
 
-@app.get("/doctors")
-def get_doctors():
-    return jsonify(doctors)
-
-
-@app.get("/appointments")
+@app.route("/appointments", methods=["GET"])
 def get_appointments():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM appointments ORDER BY id DESC")
+    appointments = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
     return jsonify(appointments)
 
 
-@app.post("/appointments")
+@app.route("/appointments", methods=["POST"])
 def add_appointment():
     data = request.get_json()
 
-    required_fields = ["patientName", "phone", "doctorId", "date", "time"]
-    for field in required_fields:
-        if not data.get(field):
-            return jsonify({"error": f"{field} is required"}), 400
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    appointment = {
-        "id": len(appointments) + 101,
+    sql = """
+        INSERT INTO appointments
+        (patientName, phone, doctorName, department, date, time, reason, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+    values = (
+        data["patientName"],
+        data["phone"],
+        data["doctorName"],
+        data["department"],
+        data["date"],
+        data["time"],
+        data.get("reason", ""),
+        "Scheduled"
+    )
+
+    cursor.execute(sql, values)
+    conn.commit()
+
+    new_id = cursor.lastrowid
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({
+        "id": new_id,
         "patientName": data["patientName"],
         "phone": data["phone"],
-        "doctorId": int(data["doctorId"]),
+        "doctorName": data["doctorName"],
+        "department": data["department"],
         "date": data["date"],
         "time": data["time"],
         "reason": data.get("reason", ""),
-        "status": "Scheduled",
-    }
-
-    appointments.insert(0, appointment)
-    return jsonify(appointment), 201
+        "status": "Scheduled"
+    }), 201
 
 
-@app.patch("/appointments/<int:appointment_id>")
-def update_appointment_status(appointment_id):
+@app.route("/appointments/<int:appointment_id>", methods=["PATCH"])
+def update_appointment(appointment_id):
     data = request.get_json()
 
-    for appointment in appointments:
-        if appointment["id"] == appointment_id:
-            appointment["status"] = data.get("status", appointment["status"])
-            return jsonify(appointment)
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    return jsonify({"error": "Appointment not found"}), 404
+    cursor.execute(
+        "UPDATE appointments SET status = %s WHERE id = %s",
+        (data["status"], appointment_id)
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Appointment updated"})
 
 
-@app.delete("/appointments/<int:appointment_id>")
+@app.route("/appointments/<int:appointment_id>", methods=["DELETE"])
 def delete_appointment(appointment_id):
-    for appointment in appointments:
-        if appointment["id"] == appointment_id:
-            appointments.remove(appointment)
-            return jsonify({"message": "Appointment deleted"})
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    return jsonify({"error": "Appointment not found"}), 404
+    cursor.execute("DELETE FROM appointments WHERE id = %s", (appointment_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Appointment deleted"})
 
 
 if __name__ == "__main__":
