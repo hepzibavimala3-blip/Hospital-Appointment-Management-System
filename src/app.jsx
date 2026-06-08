@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API = "https://hospital-appointment-management-system-2.onrender.com";
+const API = "https://hospital-appointment-management-system-5.onrender.com/";
 
 const healthIssues = [
   "Regular Checkup",
