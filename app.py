@@ -9,10 +9,11 @@ CORS(app)
 
 def get_db():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="root",       # ← change to your MySQL password
-        database="hospital_db"
+        host="sql5.freesqldatabase.com",
+        port=3306,
+        user="sql5829703",
+        password="SM9FlWaLme",
+        database="sql5829703"
     )
 
 
