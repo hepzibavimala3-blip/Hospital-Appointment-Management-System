@@ -9,11 +9,11 @@ CORS(app)
 
 def get_db():
     return mysql.connector.connect(
-        host="sql5.freesqldatabase.com",
-        port=3306,
-        user="sql5829703",
-        password="SM9FlWaLme",
-        database="sql5829703"
+        host="mysql-20d208d9-hepzibavimala3-7c7f.g.aivencloud.com",
+        port=13084,
+        user="avnadmin",
+        password="AVNS_CCuuhjfAa1m_a5puMM4",
+        database="defaultdb"
     )
 
 
